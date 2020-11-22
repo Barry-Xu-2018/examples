@@ -35,8 +35,12 @@ public:
     auto timer_callback =
       [this]() -> void {
         auto message = std_msgs::msg::String();
-        message.data = "Hello, world! " + std::to_string(this->count_++);
-        RCLCPP_INFO(this->get_logger(), "Publishing: '%s'", message.data.c_str());
+        char send_data[524288];
+        memset(send_data, 'A', 524288);
+        send_data[524288-1] = '\0';
+        message.data = std::to_string(this->count_++) + ":" + std::string(send_data, 524288);
+        //message.data = "Hello, world! " + std::to_string(this->count_++);
+        RCLCPP_INFO(this->get_logger(), "Publishing: '%d'", this->count_);
         this->publisher_->publish(message);
       };
     timer_ = this->create_wall_timer(500ms, timer_callback);

@@ -27,7 +27,8 @@ public:
       "topic",
       10,
       [this](std_msgs::msg::String::UniquePtr msg) {
-        RCLCPP_INFO(this->get_logger(), "I heard: '%s'", msg->data.c_str());
+        //RCLCPP_INFO(this->get_logger(), "I heard: '%s'", msg->data.c_str());
+        RCLCPP_INFO(this->get_logger(), "size: %d --- %s", msg->data.size(), msg->data.substr(0, 10).c_str());
       });
   }
 
