@@ -13,6 +13,8 @@
 // limitations under the License.
 
 #include <memory>
+#include <thread>
+#include <chrono>
 
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/string.hpp"
@@ -23,22 +25,44 @@ public:
   MinimalSubscriber()
   : Node("minimal_subscriber")
   {
-    subscription_ = this->create_subscription<std_msgs::msg::String>(
-      "topic",
+    auto sub_opt = rclcpp::SubscriptionOptions();
+    callback_group_sub_ = this->create_callback_group(rclcpp::callback_group::CallbackGroupType::Reentrant);
+    sub_opt.callback_group = callback_group_sub_;
+
+    subscription1_ = this->create_subscription<std_msgs::msg::String>(
+      "topic1",
       10,
       [this](std_msgs::msg::String::UniquePtr msg) {
-        RCLCPP_INFO(this->get_logger(), "I heard: '%s'", msg->data.c_str());
-      });
+        RCLCPP_INFO(this->get_logger(), "topic1 '%s'", msg->data.c_str());
+        std::this_thread::sleep_for(std::chrono::seconds(5));
+        RCLCPP_INFO(this->get_logger(), "topic1 '%s' -- leave", msg->data.c_str());
+      },
+      sub_opt);
+    subscription2_ = this->create_subscription<std_msgs::msg::String>(
+      "topic2",
+      10,
+      [this](std_msgs::msg::String::UniquePtr msg) {
+        RCLCPP_INFO(this->get_logger(), "topic2 '%s'", msg->data.c_str());
+        std::this_thread::sleep_for(std::chrono::seconds(5));
+        RCLCPP_INFO(this->get_logger(), "topic2 '%s' -- leave", msg->data.c_str());
+      },
+      sub_opt);
   }
 
 private:
-  rclcpp::Subscription<std_msgs::msg::String>::SharedPtr subscription_;
+  rclcpp::Subscription<std_msgs::msg::String>::SharedPtr subscription1_;
+  rclcpp::Subscription<std_msgs::msg::String>::SharedPtr subscription2_;
+  rclcpp::callback_group::CallbackGroup::SharedPtr callback_group_sub_;
 };
 
 int main(int argc, char * argv[])
 {
   rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<MinimalSubscriber>());
+  rclcpp::executors::MultiThreadedExecutor executor(rclcpp::executor::ExecutorArgs(),5,true);
+  auto node = std::make_shared<MinimalSubscriber>();
+  executor.add_node(node);
+  //rclcpp::spin(std::make_shared<MinimalSubscriber>());
+  executor.spin();
   rclcpp::shutdown();
   return 0;
 }
